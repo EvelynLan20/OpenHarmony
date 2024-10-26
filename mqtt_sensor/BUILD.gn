@@ -1,0 +1,128 @@
+
+if (defined(ohos_lite)) 
+{
+  import("//build/lite/config/component/lite_component.gni")
+
+  copy("mqtt_config") { 
+    sources = [ "config/mqtt_config.json" ]
+    outputs = [ "$root_out_dir/etc/{{source_file_part}}" ]
+  }
+
+  copy("libssl") {
+    sources = [ "//base/CSG/mqtt/openssl-1.1.1w/lib/libssl.so.1.1" ]
+    outputs = [ "$root_out_dir/usr/lib/{{source_file_part}}" ]
+  }
+
+  executable("MQTT_Sensor_Demo") {
+    sources = [
+      "demo/demo.c",
+      "demo/uart_test.c",
+      "MQTT_AGENT_C/src/iota.c",
+      "MQTT_AGENT_C/src/iotaimp.c",
+      "MQTT_AGENT_C/src/JsonParser.c"
+    ]
+    include_dirs = [
+      "MQTT_AGENT_C/include",
+      "//third_party/ph_mqtt/src",
+      "//third_party/ph_mqtt/build",
+      "//base/CSG/mqtt/openssl-1.1.1w/include",
+      "//drivers/hdf_core/framework/include/platform",
+      "//drivers/peripheral/light/interfaces/include",
+      "//third_party/bounds_checking_function/include"
+    ]
+    defines = []
+    cflags_c = [
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-format",
+      "-Wno-format-extra-args",
+      "-std=c99"
+    ]
+    ldflags = []
+    deps = [
+      "//drivers/peripheral/light/hal:hdi_light",
+      "//third_party/ph_mqtt:libpaho-mqtt3as",
+      "//build/lite/config/component/cJSON:cjson_shared"
+    ]
+
+    lib_dirs = [ "//base/CSG/mqtt/openssl-1.1.1w/lib" ]
+    libs = ["ssl","crypto"]
+  }
+
+  lite_component("my_mqtt_test") {
+    features = [ 
+      ":MQTT_Sensor_Demo",
+      ":mqtt_config",
+      ":libssl"
+    ]
+  }
+}
+else
+{
+  import("//build/ohos.gni")
+  import("//drivers/hdf_core/adapter/uhdf2/uhdf.gni")
+  import("//build/test.gni")
+  
+  copy("mqtt_config") { 
+    sources = [ "config/mqtt_config.json" ]
+    outputs = [ "$root_out_dir/etc/{{source_file_part}}" ]
+  }
+
+  copy("libssl") {
+    sources = [ "//base/CSG/mqtt/openssl-1.1.1w/lib/libssl.so.1.1" ]
+    outputs = [ "$root_out_dir/NOTICE_FILES/system/lib64/{{source_file_part}}" ]
+  }
+
+  ohos_executable("MQTT_Sensor_Demo") {
+    sources = [
+      "demo/mqtt_sensor_final.c",
+      "MQTT_AGENT_C/src/iota.c",
+      "MQTT_AGENT_C/src/iotaimp.c",
+      "MQTT_AGENT_C/src/JsonParser.c"
+    ]
+    include_dirs = [
+      "MQTT_AGENT_C/include",
+      "//third_party/ph_mqtt/src",
+      "//third_party/ph_mqtt/build",
+      "//base/CSG/mqtt/openssl-1.1.1w/include",
+      "//drivers/hdf_core/framework/include/platform",
+      "//drivers/peripheral/light/interfaces/include",
+      "//third_party/bounds_checking_function/include",
+    ]
+    defines = []
+
+    cflags_c = ["-std=c99"]
+    ldflags = []
+    deps = [
+      "//third_party/ph_mqtt:libpaho-mqtt3as",
+      "//third_party/cJSON:cjson",
+      # "//drivers/peripheral/light/hal:hdi_light"
+    ]
+
+     external_deps =[
+        "c_utils:utils",
+        "hdf_core:libhdf_utils",
+        "hdf_core:libhdf_platform",
+        "drivers_peripheral_light:hdi_light"
+    ]
+
+    lib_dirs = [ 
+      "//base/CSG/mqtt/openssl-1.1.1w/lib"
+    ]
+    libs = ["ssl", "crypto"]
+
+    install_images = [ "system" ]
+    install_enable = true
+    subsystem_name = "CSG"
+    part_name = "mqtt_sensor"
+  }
+
+  group("my_mqtt_sensor") {
+    deps = [ 
+      ":MQTT_Sensor_Demo",
+      ":mqtt_config",
+      ":libssl",
+    ]
+  }
+}

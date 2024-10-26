@@ -1,0 +1,39 @@
+{
+    "name": "@ohos/mqtt_sensor",
+    "description": "MQTT agent c source code",
+    "version": "3.1",
+    "license": " MIT",
+    "publishAs": "code-segment",
+    "segment": {
+        "destPath": "base/CSG/mqtt/mqtt_sensor"
+    },
+    "dirs": {},
+    "scripts": {},
+    "component": {
+        "name": "mqtt_sensor",
+        "subsystem": "CSG",
+        "syscap": [],
+        "features": [],
+        "adapted_system_type": [ "mini", "small", "standard" ],
+        "rom": "",
+        "ram": "",
+        "deps": {
+            "components": [
+                "c_utils",
+                "drivers_peripheral_light",
+                "hdf_core"
+            ],
+            "third_party": [
+                "cJSON",
+                "ph_mqtt"
+            ]
+        },
+        "build": {
+            "sub_component": [
+                "//base/CSG/mqtt/mqtt_sensor:my_mqtt_sensor"
+            ],
+            "inner_kits": [],
+            "test": []
+        }
+    }
+}

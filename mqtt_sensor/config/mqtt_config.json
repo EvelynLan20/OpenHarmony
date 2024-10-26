@@ -1,0 +1,8 @@
+{
+	"DeviceId":"503D2212X00009",
+	"UserName":"69A8D169970C43F2B54A0BD59172753A",
+	"Passwd":"123456",
+	"ClientId":"503D2212X00009",
+	"ServiceIp":"192.168.3.1",        
+	"ServicePort": 1883
+}
