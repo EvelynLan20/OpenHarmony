@@ -24,7 +24,8 @@
 #include <string.h> 
 #include "light_if.h"
 #include "light_type.h"
-
+#include "hdf_io_service_if.h"
+#include "gpio_if.h"
 
 /* Device connection info */
 //char* g_server_addr = "192.168.3.98"; // mqtt连接服务IP
@@ -52,7 +53,7 @@ char* g_workPath = ".";
 int   g_keepAlivetime = 120;   /* Set the heartbeat interval to 120 seconds */
 int   g_login = 0;
 char* g_query_message;
-const char *filename = "/data/output.txt"; // 文件名
+const char *filename = "/data/app/el2/100/base/com.powerharmony.myapplication/cache/output.txt"; // 文件名
 DevHandle handle = NULL;
 
 /*
@@ -104,6 +105,19 @@ void handle_sigint(int sig) {
 }
 
 
+void fan(int fan_port, int level) {
+    // int port = 0;
+    // uint16_t level = 0;
+    // port = atoi(fan_port);
+    // level = atoi(status);
+    if (level > 0) {
+        level = 1;
+    }
+
+    GpioSetDir(fan_port, GPIO_DIR_OUT);
+    printf("GPIO[%d] set level: [%d]\n", fan_port, level);
+    GpioWrite(fan_port, level);
+}
 
 
 void timeSleep(int ms)
@@ -1073,7 +1087,9 @@ int main(int argc, char** argv)
     // waitForCommond();
     while(1) {
         int tmp = 0;
-        float temp = 0.0;
+        float temp = 0.0; // 温度
+        int status = 0; // 告警状态
+
         ret=UartRead(handle, rbuff, 1000);                      // 从UART设备读取数据
         if(ret<0){
             printf("read fail ret:%d\r\n",ret);
@@ -1081,6 +1097,7 @@ int main(int argc, char** argv)
         }
         if(ret==-1||ret==0){
             printf("reading failure\n");
+            usleep(100*1000); //sleep 100ms
             continue;    //如果没读到，那就跳出循环再读
         }
         // printf("readlen=:%d\n",ret);
@@ -1096,19 +1113,28 @@ int main(int argc, char** argv)
             // unsigned char decimalPart = rbuff[4] & 0x0F;
             temp = (float)integerPart / 10.0f;
             printf("temperature:%.1f\n",temp);
+            
             if(temp > 30)
             {
                 g_lightDev->TurnOnLight(g_lightInfo[0].lightId, &effect);       // 打开灯光
+                status = 1;
             }
             else
             {
                 g_lightDev->TurnOffLight(g_lightInfo[0].lightId);               // 关闭灯光
+                status = 0;
             }
+            fan(16, status);
         }
         printf("\n");
         usleep(100*1000); //sleep 100ms
         // float res = TemperatureRead(rbuff, ret, handle);
         // printf("Temperature: %.1f", res);
+
+        // 温度读取失败则跳过
+        if(temp < 1) {
+            continue;
+        }
 
         // 往主题发送数据
         float temperature = temp;
@@ -1116,7 +1142,8 @@ int main(int argc, char** argv)
         brp.pcDeviceId = g_device_id ; // 设备标识 "503D2212X00009"
         brp.pcServiceId = g_service_id;
         char json_string[50];  // 存储 JSON 字符串的缓冲区
-        sprintf(json_string, "{\"temperature\":\"%.1f\"}", temperature); // 使用 sprintf 将浮点数格式化为 JSON 格式的字符串
+        // sprintf(json_string, "{\"temperature\":\"%.1f\"}", temperature); // 使用 sprintf 将浮点数格式化为 JSON 格式的字符串
+        sprintf(json_string, "{\"temperature\":\"%.1f\", \"Status\":%d}", temperature, status);
         brp.pcPayload = json_string;
         int  messageId = IOTA_ServiceCustomTopicReport(&brp, "1.0", "Temperature");
         printf("MQTT_Demo: Test_CustomTopicReport(), report data with messageId %d \n", messageId);
@@ -1130,7 +1157,7 @@ int main(int argc, char** argv)
         }
 
         // 写入字符串到文件
-        fprintf(file, "%.1f\n", temp);
+        fprintf(file, "%.1f %d\n", temp, status);
 
         // 关闭文件
         fclose(file);
